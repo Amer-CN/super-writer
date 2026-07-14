@@ -1,0 +1,29 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.egg-info/
+dist/
+build/
+
+# Pytest
+.pytest_cache/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Archives
+*.zip
+
+# Internal process files (not part of the Skill itself)
+phase4-evaluation-plan.md
+phase4-materials-structure.md
+package_zip.py
+prepackage_check.py

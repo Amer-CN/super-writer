@@ -1,0 +1,10 @@
+version: 0.2.0-rc2.1-hotfix
+status: ready_for_personal_use
+engineering_tests: passed
+smoke_test: passed
+formal_phase4: skipped_for_personal_use
+evaluation_method: continuous_dogfooding
+iteration_strategy: fix_repeated_real_world_issues
+test_count: 89
+freeze_date: 2026-07-14
+release_date: 2026-07-14

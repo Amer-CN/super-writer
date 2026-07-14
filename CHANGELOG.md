@@ -1,0 +1,352 @@
+# CHANGELOG
+
+## v0.2.0-rc2.1-hotfix — 正式投入个人使用 (2026-07-14)
+
+### 状态变更
+
+- `status`: `frozen-for-evaluation` → `ready_for_personal_use`
+- `formal_phase4`: `skipped_for_personal_use`（个人使用，不进行公开评测）
+- `evaluation_method`: `continuous_dogfooding`（真实使用持续验证）
+- `iteration_strategy`: `fix_repeated_real_world_issues`（重复出现的问题才纳入规则）
+
+### 验收结论
+
+- ZIP 和 Manifest 完整性通过
+- SHA-256 校验通过
+- 89 个工程与行为测试全部通过
+- 4 个关键场景冒烟测试通过（S01 正常 / S02 缺经历 / S03 证据冲突 / S04 核心崩塌）
+- 写作核心已冻结
+- 无阻塞问题
+
+### 后续迭代规则
+
+1. 直接安装并投入日常写作
+2. 保留当前 ZIP 作为稳定基线和回滚版本
+3. 使用中记录真实问题、输入、输出和人工修改
+4. 严重问题可以立即修复
+5. 普通问题重复出现 2~3 次后再纳入规则
+6. 每累计 5~10 篇文章集中复盘和升级一次
+7. 不因单篇文章的问题立即修改通用写作规则
+8. 后续升级不得静默覆盖当前稳定版本
+
+## v0.2-rc2.1-hotfix (2026-07-14)
+
+### rc2.1 审计修复（3 项工程边界 + 1 项文档）
+
+基于 v0.2-rc2.1 最终复审报告，修复 3 个工程边界问题和 1 个文档问题。不修改写作方法论、Prompt、评分维度或权重。
+
+#### H1: support/conflict 无已有规则时失败
+
+- `scripts/learn_edits.py`：`validate_reviewer_judgments()` 中 support/conflict 不再跳过空 existing_keys 检查
+- existing_keys 为空时，support/conflict 直接失败并报错"requires existing rules"
+- `generate_updated_rules()` 新增第二层防御检查：support/conflict 引用不存在的 key 时抛出 ValueError
+- 新增 3 个测试：`test_h1_support_empty_existing_keys_fails`、`test_h1_conflict_empty_existing_keys_fails`、`test_h1_support_defensive_check_in_merge`
+
+#### H2: observed_at/source_id 强制必填 + 日期格式校验
+
+- `scripts/learn_edits.py`：new/support/conflict 关系现在强制要求 `observed_at` 和 `source_id`
+- `observed_at` 必须符合 `YYYY-MM-DD` 格式，使用 `datetime.strptime` 校验
+- one_off 关系不强制要求这两个字段（保持灵活）
+- 新增 4 个测试：`test_h2_new_without_observed_at_rejected`、`test_h2_new_without_source_id_rejected`、`test_h2_support_without_observed_at_rejected`、`test_h2_invalid_date_format_rejected`
+
+#### H3: Machine scores 防御检查
+
+- `scripts/calibrate_scorer.py`：`load_machine_scores()` 新增 4 项防御检查：
+  - 重复 article_id 检测
+  - overall_score 范围校验（0-100）
+  - 各维度分数范围校验（0-该维度 max）
+  - 维度总和与 overall_score 一致性校验（±1 容差）
+- 新增 5 个测试：`test_h3_duplicate_article_id_fails`、`test_h3_overall_score_above_100_fails`、`test_h3_overall_score_negative_fails`、`test_h3_dimension_out_of_range_fails`、`test_h3_dimension_sum_mismatch_fails`
+
+#### H4: 交付报告修正
+
+- 重新生成 `super-writer-v0.2-rc2.1-hotfix-delivery.md`，修正版本号为 rc2.1-hotfix
+- 修正修改文件数量描述为"3 类核心修复"
+- 更新测试数量为 89
+
+### 打包信息
+
+- ZIP：`super-writer-v0.2-rc2.1-hotfix.zip`
+- 测试：89 passed（新增 12 个回归测试）
+
+## v0.2-rc2.1 (2026-07-14)
+
+### rc2 审计修复（5 项工程补丁）
+
+基于 v0.2-rc2 文件级复审报告，修复全部 5 个剩余工程问题。不修改写作方法论、Prompt、评分维度或权重。
+
+#### R1: Spearman ties 使用秩向量 Pearson
+
+- `scripts/calibrate_scorer.py`：新增 `_pearson()` 函数
+- `spearman_rank_correlation()` 改为对两个平均秩向量计算 Pearson 相关系数
+- 处理零方差情况（返回 0.0）
+- 新增 4 个测试：`test_spearman_asymmetric_ties_exact`、`test_spearman_zero_variance`、`test_spearman_both_zero_variance`、`test_pearson_basic`
+
+#### R2: load_samples 缺失文章时失败
+
+- `load_samples()` 不再打印 Warning 后跳过，改为收集全部缺失 ID 后抛出 ValueError
+- 新增重复 article_id 检查
+- 新增空文件检查（<50 字符）
+- 新增 4 个测试：`test_load_samples_missing_article_fails`、`test_load_samples_duplicate_id_fails`、`test_load_samples_empty_article_fails`、`test_load_samples_short_article_fails`
+
+#### R3: Reviewer judgment 严格 Schema 校验
+
+- `validate_reviewer_judgments()` 新增 `existing_keys` 参数
+- `new`：必须提供非空 key、instruction、evidence
+- `support/conflict`：必须提供非空 key，且 key 必须存在于 existing_keys
+- `one_off`：允许无 key，但必须有 evidence
+- confidence 必须是 1-5 范围内的数字
+- change_index 不得重复
+- 无效输入直接失败，不静默跳过
+- 新增 6 个测试
+
+#### R4: 稳定 key 生成
+
+- 移除 `hash(instruction) % 10000`（Python hash 带随机种子，跨进程不稳定）
+- 新增 `_generate_stable_key()` 使用 `sha256(normalized_instruction)[:12]`
+- 同一 instruction 在不同进程中始终生成相同 key
+- 新增 2 个测试：`test_r4_stable_key_deterministic`、`test_r4_stable_key_different_instructions`
+
+#### R5: 时间字段和 evidence 字段分离
+
+- Reviewer judgment 新增 `observed_at` 和 `source_id` 字段
+- `last_supported_at` / `last_conflicted_at` 写入 `observed_at`（日期）
+- evidence 保存到独立 `_evidence` 字段
+- `source_id` 追加到 `sources` 列表
+- 更新 fixture judgments 文件以包含新字段
+- 新增 2 个测试：`test_r5_time_field_writes_date_not_evidence`、`test_r5_conflict_time_field_writes_date`
+
+### 打包信息
+
+- ZIP：`super-writer-v0.2-rc2.1.zip`
+- 测试：77 passed
+
+## v0.2-rc2 (2026-07-14)
+
+### 审计修复（4 个 Blocking + 9 个 Important）
+
+基于 v0.2-rc1 文件级审计报告，修复全部 4 个 Blocking 问题和 9 个 Important 问题。
+
+#### B1: 校准脚本 machine scores 输入链路修复
+
+- `scripts/calibrate_scorer.py`：完全重写
+  - 新增 `--machine-scores` 参数，人工标签和机器评分使用独立输入文件
+  - 新增 `--mode architecture|calibrated` 显式模式选择
+  - calibrated 模式缺少 `--machine-scores` 时失败退出，不再静默补 0
+  - 新增 `check_id_overlap()`，校准集和盲测集 article_id 重叠时失败
+  - `load_samples()` 不再加载 machine_score，由 `load_machine_scores()` 独立加载
+  - `calibration_status` 由显式 mode 决定，不再通过"是否全为0"猜测
+
+#### B2: 编辑学习职责重划分
+
+- `scripts/learn_edits.py`：完全重写
+  - Python 只负责生成 diff、验证 Schema、合并 key、更新计数
+  - 语义分类和规则抽象交给 Reviewer/LLM 输出 JSON judgments
+  - 新增 `validate_reviewer_judgments()` 验证 relation 字段
+  - `generate_updated_rules()` 需要 `relation` 字段才能调整 confidence
+  - 未提供 relation 时，不调整置信度
+  - 新增 `ignored` status（confidence 降为 0 时标记，不删除）
+- `references/edit-learning.md`：更新流程文档，新增职责划分和 Reviewer 判断格式
+
+#### B3: 真实 fixtures 和行为测试
+
+- `tests/fixtures/samples/`：新增 3 篇真实最小文章
+- `tests/fixtures/machine-scores.json`：新增独立机器评分文件
+- `tests/fixtures/blind/blind-001.md` + `blind-labels.json` + `blind-machine-scores.json`：新增盲测 fixtures
+- `tests/fixtures/edit-pairs/pair-01/`：draft/final/judgments（new 规则）
+- `tests/fixtures/edit-pairs/pair-02/`：draft/final/judgments（conflict 规则）
+- `tests/test_calibration.py`：重写为 23 个行为测试（含 Spearman ties、ID 重叠、CLI 端到端）
+- `tests/test_structure.py`：重写，修复空测试，新增 12 个编辑学习行为测试
+- 测试从 42 个增加到 59 个：结构测试 26 + 脚本单元测试 12 + 行为测试 21
+
+#### B4: 缺失设计文档纳入包内
+
+- 新增 `capability-matrix.md`：能力对比矩阵
+- 新增 `design-decisions.md`：16 项设计决策
+- 新增 `conflict-resolution.md`：14 项冲突处置
+- `phase4-materials-structure.md` 已在包内
+
+#### I1: MANIFEST.sha256 跨平台修复
+
+- `scripts/package_zip.py`：Manifest 路径统一使用 POSIX 正斜杠
+
+#### I2: 冻结日期修正
+
+- `VERSION`：freeze_date 从 2025-07-14 改为 2026-07-14
+- `phase4-evaluation-plan.md`：日期从 2025 改为 2026
+
+#### I3: SKILL.md 错字修正
+
+- 两处"崩場"修正为"崩塌"
+
+#### I4: README 测试数量修正
+
+- 从"38 个测试"改为"59 个测试"，区分结构测试、脚本单元测试、行为测试
+
+#### I5: Phase 4 输出数量修正
+
+- 稳定性检查从"88 个额外输出"修正为"64 个额外输出"
+- 完整总数从隐含的 184 修正为 160（96 + 64）
+
+#### I6: Spearman 并列分数处理
+
+- `_rank()` 替换为 `_rank_with_ties()`，使用平均秩处理 ties
+- 新增 `test_spearman_with_ties` 和 `test_rank_with_ties` 测试
+
+#### I7: Voice Profile 移除自动删除
+
+- `references/voice-profile.md`：confidence < 2 从"淘汰，自动删除"改为"标记 stale/ignored，不自动删除"
+
+#### I8: 训练数据表述安全化
+
+- `references/research-evidence.md`：从"使用训练数据中的已知信息，标注为推测"改为"先验知识作为线索，时间敏感信息必须核验，无法核验标记 unverified_background"
+
+#### I9: 发布门槛 Hard Fail 说明修正
+
+- `phase4-evaluation-plan.md`：hard_fail_rate 从"<= 3%"改为"0 次即不通过"，明确 24 个任务中任何 1 次都不通过
+
+### 打包信息
+
+- ZIP：`super-writer-v0.2-rc2.zip`
+- 测试：59 passed
+
+## v0.2-rc1 (2025-07-14)
+
+### 冻结前复核修订（3 项）
+
+基于用户上线第四阶段前的三个复核点，对 v0.2 进行最终修订后冻结为 rc1：
+
+#### 复核点1：类比裂口四类判断
+
+- `references/structure-design.md`：类比裂口从"一律用叙事推过去"改为四类判断框架
+  - 裂口揭示结论边界 → 写出来作为洞察
+  - 裂口只是局部不完全映射 → 说明边界后继续使用
+  - 裂口破坏核心因果 → **必须弃用类比**
+  - 裂口会误导读者 → **不得靠叙事掩盖**
+  - 增加判断步骤和反例
+
+#### 复核点2：编辑规则置信度双向调整
+
+- `references/edit-learning.md`：confidence 从只升不降改为双向调整
+  - 新样本支持：+1（cap 5）
+  - 新样本冲突：-1（floor 0）
+  - 用户撤销：status = revoked
+  - 长期未出现：标记 stale，不自动删除
+  - 只适用某类文章：缩小 scope
+  - 当前指令与历史规则冲突：当前指令优先
+- `profiles/edit-rules.example.yaml`：规则数据结构升级
+  - 新增字段：support_count, conflict_count, status, last_supported_at, last_conflicted_at
+  - status 取值：active | revoked | stale
+- `scripts/learn_edits.py`：generate_updated_rules 支持双向 confidence
+  - 新增 conflicts_with_existing 参数
+  - conflict_count > support_count 时自动标记 stale
+  - check_playbook_trigger 统计包含 conflict_count
+
+#### 复核点3：研究停止条件三层结构
+
+- `references/research-evidence.md`：停止条件从"六项全部满足"改为三层
+  - 必须满足：关键事实可追溯、主要论断有证据、未解决项有标记
+  - 尽量满足：找到反方、主要章节有价值载体、连续研究无增量、来源时效
+  - 无法满足时退出：research_limited / needs_author_input / evidence_conflict / core_broken
+  - 个人经历型文章可用作者基于真实经历进行自我质疑代替外部反方
+- `references/workflow.md`：退出状态表增加 research_limited
+- `SKILL.md`：退出状态表增加 research_limited
+
+### 测试
+
+- 42 个测试全部通过（新增 4 个双向置信度行为测试）
+- 新增测试覆盖：支持时 confidence 上升、冲突时下降、conflict > support 时自动 stale、playbook trigger 包含 conflict_count
+
+### 冻结声明
+
+- 当前版本标记为 **v0.2-rc1**
+- 评测期间不再修改规则、不调整评分权重、不修测试样本
+- 所有发现登记为 issue，完成第一轮后统一形成 rc2
+
+### 打包前术语修正（1 项）
+
+- `references/research-evidence.md`：将"人格自我质疑"修正为"作者基于真实经历进行自我质疑"，避免与已拒绝引入的预设 Persona 概念混淆（术语校正，非机制修改）
+
+### 打包信息
+
+- ZIP：`super-writer-v0.2-rc1.zip`
+- SHA-256：`4d5208645871f9a1ee786f73b4bc4d1ffe60be6b6dcd10d4265a9b409698dd72`
+- 文件数：34（含 VERSION + MANIFEST.sha256）
+- 排除：`__pycache__/`、`*.pyc`、`.git/`、临时脚本（`prepackage_check.py`、`package_zip.py`）
+- 测试结果：42 passed in 0.32s
+
+## v0.2.0 (2025-07-14)
+
+### 评审修订
+
+基于用户摘要级评审意见，对 v0.2 方案进行了 13 项修改：
+
+1. 素材充分性检查从 P2 提升到 P1
+2. 证据地图增强从 P3 提升到 P1
+3. 评分器校准拆为 P1（架构）和 P2（用真实样本完成第一次校准）
+4. Burstiness 从 P2 降为 P3，只允许非阻塞诊断
+5. 选题评分采用两层结构（HKR + UEPT）
+6. Voice Profile 采用核心 8 维 + 可选 4 维
+7. Voice Profile 每维保存 confidence/source_count/sources/scope
+8. 编辑学习采用"自动分析和提议、人工确认写入"
+9. 校准集 24 篇 + 盲测集 12 篇
+10. 增加研究停止条件
+11. 增加失败退出状态
+12. Burstiness 不设通用中文硬阈值
+13. 保持现有边界
+
+### P1 变更（11 项）
+
+- `references/research-evidence.md`：增加素材充分性检查、排斥分析、痛点深度检查、研究停止条件
+- `references/core-finding.md`：增加两层选题评分（HKR + UEPT）、四铲深化
+- `templates/evidence-map.md`：重构为完整字段（来源日期、原始来源、支持/反对、适用边界、核验状态、使用状态）+ Reader Tension Statement
+- `references/voice-profile.md`：重构为分层结构（核心 8 维 + 可选 4 维）+ confidence 使用规则 + 冲突解决优先级
+- `profiles/voice-profile.example.yaml`：重构为分层 YAML 结构，每维带 confidence/source_count/sources/scope
+- `references/editorial-review.md`：增加补充检查项（claim→mechanism、A vs B 对比、示例去重、So what 测试、视角审计）
+- `references/edit-learning.md`：增加配置（自动分析+提议、禁止静默写入）、confidence 使用规则、key 复用机制、验证测试、触发提示
+- `profiles/edit-rules.example.yaml`：增加 key/occurrences/confirmed/last_seen 字段
+- `templates/editor-report.md`：增加 JSON 输出模板、补充检查项清单
+- `references/workflow.md`：增加素材充分性门禁、失败退出机制
+- `SKILL.md`：增加 Phase 1.5 素材充分性检查、验收标准、失败退出路径
+- `scripts/learn_edits.py`：增加 pattern 分类、key 复用、候选规则生成
+- `scripts/calibrate_scorer.py`：新建校准脚本（MAE/Spearman/classification 指标、盲测隔离）
+- `tests/test_calibration.py`：新建校准测试
+- `tests/fixtures/`：新建样本集和盲测集目录结构
+
+### P2 变更（4 项）
+
+- `references/structure-design.md`：增加类比裂口处理段落
+- `references/handoff.md`：增强下游 Skill 列表（humanizer/formatter/publisher + 触发条件）
+- `scripts/learn_edits.py`：增加 check_playbook_trigger、generate_updated_rules、置信度自动更新
+- `scripts/calibrate_scorer.py`：支持真实样本校准执行
+
+### P3 变更（1 项）
+
+- `scripts/score_article.py`：增加 Burstiness 非阻塞诊断（6 项软诊断检查、风险等级输出、交接给 humanizer）
+
+### 测试
+
+- 38 个测试全部通过
+- 覆盖：结构完整性、边界检查、素材充分性门禁、两层选题评分、研究停止条件、排斥分析、痛点深度、四铲深化、证据地图增强、Voice Profile 分层、内容审稿增强、编辑学习配置、编辑规则增强、评分器 JSON、失败退出机制、验收标准、校准架构、校准脚本运行、编辑学习增强、类比裂口处理、下游交接增强、Burstiness 非阻塞、Burstiness 输出格式、无预设 Persona、无 SEO、无去 AI 味硬阈值
+
+### 设计文档更新
+
+- `capability-matrix.md`：5 个设计问题标记为已解决，优先级标注更新
+- `design-decisions.md`：从 13 项变更扩展到 16 项，优先级重新分配，增加评审决策记录
+- `conflict-resolution.md`：从 10 项冲突扩展到 14 项，采用结构化格式，增加重开机制
+
+## v0.1.0 (初始版本)
+
+- 7 Phase 写作流程（简报 → 研究 → 找核 → 结构 → 初稿 → 审稿 → 修订）
+- P0-P3 问题分级 + 100 分内容量表
+- 证据地图（F/O/I/E 分类 + 来源等级 A-D）
+- 找核七问 + 攻核六刀
+- 9 种文章原型 + 6 条叙事弧线
+- 承重类比四条件
+- 编辑锚点机制
+- Voice Profile 基础结构
+- 编辑学习基础流程
+- 下游交接契约
+- 预检脚本（score_article.py）
+- 编辑学习脚本（learn_edits.py）
+- 结构测试（test_structure.py）
