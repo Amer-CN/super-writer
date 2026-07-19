@@ -22,6 +22,11 @@
 - 主线扣合：
 - 编辑锚点：
 - 权重：
+- content_shape：
+- semantic_blocks：
+- formatter_opportunities：
+- required_payload：
+- fallback_shape：
 
 ## 第二节：
 - 唯一任务：
@@ -32,12 +37,28 @@
 - 主线扣合：
 - 编辑锚点：
 - 权重：
+- content_shape：
+- semantic_blocks：
+- formatter_opportunities：
+- required_payload：
+- fallback_shape：
 
 ## 结尾
 - 回收什么：
 - 留下什么：
 - 行动或认知终点：
 - 权重：
+- content_shape：
+- semantic_blocks：
+- formatter_opportunities：
+- required_payload：
+- fallback_shape：
 
 ## 权重校验
 合计必须为 100%。
+
+## 语义规划校验
+- 主要高级组件数量是否在 3-6 种之间（短文可为 0-2）：
+- key_statement 是否不超过 5 个：
+- 结构化角色（comparison/timeline/faq/decision/checklist）是否有完整载荷：
+- 缺少载荷的角色是否已标注 fallback_shape：

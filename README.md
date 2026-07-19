@@ -4,7 +4,7 @@
 
 明确不负责：去 AI 味、美化排版、配图和发布。最终稿通过 `handoff` 交给下游 Skill。
 
-> **v0.2.0-rc2.1-hotfix** — `ready_for_personal_use` | 89 tests passed | MIT License
+> **v0.3.0-rc1** — `ready_for_personal_use` | 117 tests passed | MIT License
 
 ## 目录结构
 
@@ -26,13 +26,16 @@ super-writer/
 │   ├── editorial-review.md   #   内容审稿
 │   ├── edit-learning.md      #   编辑学习
 │   ├── voice-profile.md      #   文风画像
-│   └── handoff.md            #   下游交接
+│   ├── handoff.md            #   下游交接
+│   ├── semantic-components.md    #   统一语义词表（v0.3 新增）
+│   └── formatter-capability-map.md  # 排版组件能力映射（v0.3 新增）
 ├── templates/                # 输出模板
 │   ├── writing-brief.md
 │   ├── evidence-map.md
 │   ├── core-card.md
 │   ├── outline.md
-│   └── editor-report.md
+│   ├── editor-report.md
+│   └── semantic-map.yaml     #   语义映射模板（v0.3 新增）
 ├── profiles/                 # Profile 示例
 │   ├── audience-profile.example.yaml
 │   ├── voice-profile.example.yaml
@@ -42,10 +45,12 @@ super-writer/
 │   ├── score_article.py      #   预检评分
 │   ├── calibrate_scorer.py   #   评分器校准
 │   ├── learn_edits.py        #   编辑学习
-│   └── validate_skill.py     #   结构验证
-├── tests/                    # 测试套件（89 个）
+│   ├── validate_skill.py     #   结构验证
+│   └── validate_semantic_map.py  # 语义映射校验
+├── tests/                    # 测试套件（117 个）
 │   ├── test_structure.py
 │   ├── test_calibration.py
+│   ├── test_semantic_handoff.py
 │   └── fixtures/             #   测试样本
 ├── capability-matrix.md      # 能力对比矩阵
 ├── design-decisions.md       # 设计决策记录
@@ -64,6 +69,28 @@ super-writer/
 8. 大规则按需加载，避免一个巨型 SKILL.md 占满上下文。
 9. 允许失败退出，不强行产出有问题的文章。
 10. 编辑学习自动分析但人工确认写入，禁止静默修改持久规则。
+
+## v0.3 新增能力：语义化排版交接
+
+### 核心目标
+
+让写作 Skill 输出不含样式但具备丰富语义结构的 `semantic-map.yaml`，使下游排版引擎（如 `gzh-design`）无需猜测内容形态，同时保持写作内容与视觉排版的解耦。
+
+### 关键能力
+
+- **统一语义词表**：定义 41 种文章级和正文级语义角色（comparison、timeline、key_statement、steps、faq 等），每个角色附带必需字段、候选组件及降级规则。
+- **语义规划前置**：在结构设计阶段为每节额外规划 `content_shape`、`semantic_blocks`、`formatter_opportunities`、`required_payload`、`fallback_shape`。
+- **语义内容生成**：初稿阶段根据 outline 的 semantic_blocks 生成真实结构化内容，禁止在 article.md 内写 HTML/CSS/视觉指令。
+- **semantic-map.yaml 交接**：声明每个语义块的 role、payload、source_anchor、formatter_candidates 和 fallback，由校验器保证 anchor 定位准确且载荷完整。
+- **handoff v2.0 契约**：新增 `semantic_map_path` 和 `formatter` 配置块；强制要求 humanizer 修改正文后必须更新 anchor。
+- **Formatter 最终决定权**：写作端只建议组件，排版端根据平台和主题做最终选择。
+- **校验驱动**：`scripts/validate_semantic_map.py` 检查 block_id 唯一性、source_anchor 存在性、必需字段完整性、HTML/CSS 渗入禁止。
+
+### 设计原则
+
+- 内容与结构分离：`article.md` 保持纯净，结构化载荷存放在 `semantic-map.yaml`
+- 写作 Skill 不关心视觉样式，只关心语义结构
+- 排版 Skill 不关心写作逻辑，只关心如何把语义块渲染成视觉组件
 
 ## v0.2 新增能力
 
@@ -94,10 +121,11 @@ super-writer/
 
 ## 当前状态
 
-**v0.2.0-rc2.1-hotfix** — `ready_for_personal_use`
+**v0.3.0-rc1** — `ready_for_personal_use`
 
-- 89 个工程与行为测试：全部通过
+- 117 个工程与行为测试：全部通过（含 28 项语义交接测试）
 - 4 场景冒烟测试：全部通过
+- 3 篇语义 fixture 集成验收通过（简单观点文 / 结构化教程 / 深度分析）
 - 正式 Phase 4 评测：跳过（个人使用）
 - 迭代方式：真实使用持续验证（continuous dogfooding）
 
@@ -116,7 +144,7 @@ cd ~/.claude/skills/super-writer
 python -m pytest tests/ -v
 ```
 
-应看到 `89 passed`。
+应看到 `117 passed`。
 
 ## 使用方法
 
@@ -188,17 +216,20 @@ Skill 会检查 6 个维度：`topic` / `audience` / `core_opinion` / `evidence`
 - `core-card.md`
 - `outline.md`
 - `article.md`
+- `semantic-map.yaml`（v0.3 新增，语义化排版交接）
 - `editor-report.md`（Markdown + JSON）
 - `generation-profile.yaml`
-- `handoff.yaml`
+- `handoff.yaml`（v2.0 契约，含 `semantic_map_path` 与 `formatter` 配置块）
 
 ### 下游交接
 
-Super Writer 完成后输出 `handoff.yaml`，可交给下游 Skill：
+Super Writer 完成后输出 `handoff.yaml`（v2.0 契约），可交给下游 Skill：
 
-- **humanizer**：去 AI 味、节奏调整（推荐）
-- **formatter**：公众号排版、格式转换（可选）
+- **humanizer**：去 AI 味、节奏调整（推荐）。若修改了正文，必须同步更新 `semantic-map.yaml` 中失效的 exact_text anchor。
+- **formatter**：公众号排版、格式转换（推荐）。读取 `semantic-map.yaml`，根据平台和主题选择具体组件，拥有最终决定权。
 - **publisher**：直接发布（可选）
+
+v0.3 起，`handoff.yaml` 新增 `semantic_map_path` 字段指向同目录下的 `semantic-map.yaml`，以及 `formatter` 配置块（候选主题、平台约束、preserve_exactly 清单）。写作端只建议组件，排版端做最终选择。
 
 ## 测试
 
@@ -207,11 +238,12 @@ cd super-writer
 python -m pytest tests/ -v
 ```
 
-89 个测试分为三类：
+117 个测试分为四类：
 
 - **结构测试**（26 个）：检查文件中存在必要字段和配置
 - **脚本单元测试**（16 个）：测试 MAE、Spearman（含 ties）、分类准确率等指标计算
 - **行为测试**（47 个）：端到端 CLI 测试、真实 fixture 加载、编辑学习冲突流程、校准器机器分输入、严格 Schema 校验、输入防御检查等
+- **语义交接测试**（28 个）：覆盖 anchor 定位、角色校验、payload 必需字段、formatter 候选、降级路径、HTML/CSS 禁止、humanizer 失效链路、fixture 集成验收等
 
 ## 设计文档
 

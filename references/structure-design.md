@@ -78,3 +78,50 @@
 ## 章节检查
 
 每节必须明确：唯一任务、核心论点、证据、作者经历、与主线关系、篇幅权重。无法填写唯一任务的章节应合并或删除。
+
+## 语义规划（v0.3 新增）
+
+在结构设计阶段，为每节额外规划语义形态，使初稿能生成可映射的结构化内容，formatter 不需要重新猜测文章内容形态。
+
+加载 `references/semantic-components.md`（统一语义词表）和 `references/formatter-capability-map.md`（排版组件能力映射）。
+
+### 每节新增字段
+
+| 字段 | 含义 | 示例 |
+|------|------|------|
+| content_shape | 本节的内容形态 | structured_comparison / narrative / step_by_step / data_report |
+| semantic_blocks | 本节将使用的语义角色 | comparison, key_statement |
+| formatter_opportunities | 候选排版组件 | compare, oneliner-card |
+| required_payload | 结构化载荷必需字段 | 对象 A/B、对比维度、行数据 |
+| fallback_shape | 载荷缺失时的降级形态 | paragraphs + ordered_list |
+
+### 示例
+
+```
+## 第二节
+- 唯一任务：解释两种工作方式的关键差异
+- 核心论点：Agent 与普通提示词的差别不在自动化，而在任务闭环
+- content_shape: structured_comparison
+- semantic_blocks:
+  - comparison
+  - key_statement
+- formatter_opportunities:
+  - compare
+  - oneliner-card
+- required_payload:
+  - 对象 A：普通提示词
+  - 对象 B：Agent
+  - 对比维度：目标、状态、工具、反馈、退出条件
+- fallback_shape: paragraphs + ordered_list
+```
+
+### 语义规划规则
+
+1. **先根据内容选择语义形态，再由 formatter 选择具体组件。**
+2. **不得为了使用组件改变文章论证。**
+3. **同一个信息不得同时完整复制到多个组件。**
+4. **一篇文章的主要高级组件建议控制在 3–6 种。**
+5. **key_statement 建议全文不超过 5 个。**
+6. **表格、对比、时间线、FAQ 必须有完整结构化载荷。**
+7. **缺少载荷时必须使用 fallback，不允许 formatter 编造。**
+8. **不要要求每篇文章使用全部组件——内容需要时能稳定触发，内容不需要时不强行使用。**

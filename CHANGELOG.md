@@ -1,5 +1,121 @@
 # CHANGELOG
 
+## v0.3.0-rc1 — 语义化排版交接 (2026-07-19)
+
+### 状态变更
+
+- `version`: `0.2.0-rc2.1-hotfix` → `0.3.0-rc1`
+- `test_count`: 89 → 117（新增 28 项语义交接测试）
+- `handoff_contract_version`: `v2.0`（新增字段）
+- `semantic_roles_count`: `41`（新增字段）
+- 写作核心方法论（找核、攻核、研究协议、证据地图、Voice Profile、编辑学习、校准）保持不变
+
+### 核心目标
+
+让写作 Skill 输出不含样式但具备丰富语义结构的 `semantic-map.yaml`，使下游排版引擎（如 `gzh-design`）无需猜测内容形态，同时保持写作内容与视觉排版的解耦。
+
+### Phase 0：分支与基线保护
+
+- 确认 v0.2.0-rc2.1-hotfix 的 89 项测试全部通过作为基线
+- 所有 v0.3 变更在独立分支进行，不静默覆盖稳定版本
+
+### Phase 1：建立排版组件能力映射
+
+- 新增 `references/formatter-capability-map.md`
+- 统一 Super Writer 与 gzh-design 两个 Skill 之间的认知
+- 列出 gzh-design 已注册的全部组件名及其适用语义场景
+
+### Phase 2：建立统一语义词表
+
+- 新增 `references/semantic-components.md`
+- 定义 41 种语义角色（article_wrapper、hero_quote、comparison、timeline、key_statement、steps、faq、quote、facts、decision、checklist、callout 等）
+- 每个角色附带：必需 payload 字段、候选 formatter 组件、降级规则
+- 区分文章级角色和正文级角色
+
+### Phase 3：结构设计阶段前置语义规划
+
+- `references/structure-design.md`：新增"语义规划"小节
+- `templates/outline.md`：新增 `content_shape`、`semantic_blocks`、`formatter_opportunities`、`required_payload`、`fallback_shape` 字段
+- `SKILL.md` Phase 4：加载 `semantic-components.md` 和 `formatter-capability-map.md`，为每节规划语义形态
+- 写作端根据内容选择语义形态，再由 formatter 选择具体组件
+
+### Phase 4：初稿阶段生成可映射内容
+
+- `references/drafting.md`：新增"语义内容生成"小节
+- `SKILL.md` Phase 5：根据 outline 的 `semantic_blocks` 生成真实结构化内容
+- comparison 必须写出双方和统一维度；steps 必须写出有顺序的动作；timeline 必须写出时间或阶段；facts 必须附证据 ID；decision 必须写出背景、选项、权衡和结论；faq 必须是真实问题与答案；checklist 必须是可执行检查项；quote 必须保留原话和来源
+- 禁止在 article.md 内直接写组件 HTML、主题色、CSS 或视觉指令
+
+### Phase 5：semantic-map.yaml 模板
+
+- 新增 `templates/semantic-map.yaml`
+- 结构：`article` 元数据 + `blocks` 列表 + `component_policy`
+- 每个 block 包含：`block_id`、`role`、`source_anchor`（exact_text 或 section_heading）、`payload`、`formatter_candidates`、`fallback`
+- `component_policy` 声明 preserve_exactly 清单和禁止 force 的组件
+
+### Phase 6 + 7：handoff v2.0 契约 + Formatter 最终决定权
+
+- `references/handoff.md` 升级至 v2.0
+- 新增 `semantic_map_path` 字段指向 semantic-map.yaml
+- 新增 `formatter` 配置块（候选主题、平台约束、preserve_exactly 清单）
+- 明确 Formatter 最终决定权：写作端只建议组件，排版端根据平台和主题做最终选择
+- 明确 humanizer 修改正文后必须更新 anchor 的链路顺序：writing → humanizer → 重新校验 anchor → formatter
+
+### Phase 8：语义映射校验器
+
+- 新增 `scripts/validate_semantic_map.py`
+- 检查 `block_id` 唯一性
+- 检查 `source_anchor` 在原文中的存在性（exact_text 精确匹配或 section_heading 标题匹配）
+- 检查必需 payload 字段完整性（按角色定义）
+- 检查禁止 HTML/CSS 渗入 article.md 和 semantic-map.yaml
+- 检查 formatter_candidates 中的组件名在 gzh-design 注册表中存在
+- 检查 force_all_components 标志（禁止强制使用全部组件）
+- 支持 CLI 调用：`python validate_semantic_map.py <article_path> <semantic_map_path>`
+
+### Phase 9：语义交接测试套件
+
+- 新增 `tests/test_semantic_handoff.py`（28 项测试）
+- 覆盖：基础结构校验、block_id 唯一性、anchor 定位、角色合法性、payload 必需字段、HTML/CSS 禁止、formatter 候选合法性、降级路径、preserve_exactly 不可改写、原 89 项测试仍通过、CLI 端到端、SKILL.md 引用语义文件、outline 字段、structure-design 语义规划、drafting 语义生成、handoff formatter 决定权
+- 覆盖 3 篇 fixture 的集成验收（简单观点文、结构化教程、深度分析）
+
+### Phase 10：集成验收
+
+- 新增 `tests/fixtures/semantic/fixture-a-simple/`：简单观点文（5 个语义块，基础角色）
+- 新增 `tests/fixtures/semantic/fixture-b-tutorial/`：结构化教程（10+ 语义块，含 steps、checklist、code）
+- 新增 `tests/fixtures/semantic/fixture-c-analysis/`：深度分析（15+ 语义块，含 comparison、timeline、decision、quote）
+- 三篇 fixture 全部通过 `validate_semantic_map.py` 校验
+
+### 关键设计决策
+
+1. **内容与结构分离**：article.md 保持纯净可读，语义信息放到独立的 semantic-map.yaml
+2. **写作 Skill 不关心视觉样式**：只关心语义结构，不关心如何渲染
+3. **排版 Skill 不关心写作逻辑**：只关心如何把语义块渲染成视觉组件
+4. **Formatter 最终决定权**：写作端只建议组件，排版端做最终选择，避免双向耦合
+5. **校验驱动**：通过 validate_semantic_map.py 保证 anchor 定位准确且载荷完整
+6. **humanizer 链路保护**：修改正文后必须更新 anchor，不得使用已失效的旧 anchor
+
+### 兼容性
+
+- v0.2 的全部 89 项测试仍然通过（test_22_original_tests_still_pass 显式验证）
+- 旧版无 semantic-map.yaml 的交接仍可被 formatter 以"无语义信息"模式处理（降级路径）
+- 写作核心方法论未改动，仅在外围增加语义规划与交接层
+
+### 打包信息
+
+- 测试：117 passed（89 原始 + 28 新增语义交接）
+- 新增文件：6 个（formatter-capability-map.md、semantic-components.md、semantic-map.yaml、validate_semantic_map.py、test_semantic_handoff.py、3 篇 fixture）
+- 修改文件：5 个（SKILL.md、structure-design.md、drafting.md、handoff.md、outline.md）
+- 写作核心冻结日期：2026-07-14（未改动）
+- v0.3.0-rc1 发布日期：2026-07-19
+
+### 后续迭代规则
+
+1. 继续采用真实使用持续验证（dogfooding）模式
+2. 与 gzh-design 联调中发现的问题优先修复
+3. semantic-components.md 的角色新增需经两方协商
+4. 不得在写作端硬编码 formatter 的具体组件名作为唯一选择
+5. preserve_exactly 清单中的内容不得被任何下游 Skill 改写
+
 ## v0.2.0-rc2.1-hotfix — 正式投入个人使用 (2026-07-14)
 
 ### 状态变更

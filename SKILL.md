@@ -85,11 +85,13 @@ description: >-
 
 ### Phase 4：结构设计
 
-加载 `references/structure-design.md` 和 `templates/outline.md`。
+加载 `references/structure-design.md` 和 `templates/outline.md`。同时加载 `references/semantic-components.md`（统一语义词表）和 `references/formatter-capability-map.md`（排版组件能力映射）。
 
 先选文章原型，再选叙事弧线；为每节定义唯一任务、证据、经历、情绪作用、主线扣合和篇幅权重。需要时设计承重类比，但不得为了高级感强行加入。
 
-**门禁：** 每节都推动主线；结构权重有差异；证据已挂载到章节。
+**语义规划（v0.3 新增）：** 为每节额外规划 `content_shape`、`semantic_blocks`、`formatter_opportunities`、`required_payload` 和 `fallback_shape`。先根据内容选择语义形态，再由 formatter 选择具体组件。一篇文章的主要高级组件建议 3–6 种，key_statement 全文不超过 5 个。
+
+**门禁：** 每节都推动主线；结构权重有差异；证据已挂载到章节；语义角色有载荷或已标注 fallback。
 
 ### Phase 5：初稿
 
@@ -99,7 +101,9 @@ description: >-
 
 `[编辑锚点：请补充你真实经历中的具体细节，不要让 AI 代写]`
 
-**门禁：** 正文兑现核心；关键材料进入正文；没有虚构；编辑锚点清晰。
+**语义内容生成（v0.3 新增）：** 根据 outline 的 `semantic_blocks` 生成真实结构化内容。comparison 必须写出双方和统一维度；steps 必须写出有顺序的动作；timeline 必须写出时间或阶段；facts 必须附证据 ID；decision 必须写出背景、选项、权衡和结论；faq 必须是真实问题与答案；checklist 必须是可执行检查项；quote 必须保留原话和来源。禁止在 article.md 内直接写组件 HTML、主题色、CSS 或视觉指令。
+
+**门禁：** 正文兑现核心；关键材料进入正文；没有虚构；编辑锚点清晰；语义载荷完整或已标注 fallback。
 
 ### Phase 6：内容审稿
 
@@ -114,6 +118,10 @@ description: >-
 最多进行三轮有目标的修订，每轮只解决报告中列出的具体问题。禁止“感觉再润色一下”的无目标循环。
 
 加载 `references/handoff.md`，输出下游交接信息：未决事实、编辑锚点、作者待确认项、建议调用的去 AI 味或排版 Skill。
+
+**语义交接（v0.3 新增）：** 生成 `semantic-map.yaml`（模板见 `templates/semantic-map.yaml`），声明文章中每个语义块的 role、payload、source_anchor、formatter_candidates 和 fallback。使用 `scripts/validate_semantic_map.py` 校验语义映射完整性。article.md 保持干净可读，语义信息放到独立的 semantic-map.yaml。
+
+**humanizer 后 anchor 失效处理：** 如果调用 humanizer 修改了正文，必须更新 semantic-map 中失效的 exact_text anchor。不得让 humanizer 修改正文后继续使用已失效的旧 anchor。
 
 ## 编辑学习流程
 

@@ -32,3 +32,34 @@
 ## 写作与去 AI 味的边界
 
 初稿只做必要的可读性调整，不运行全面禁词、句长扰动、碎句治理或口语化重写。内容审稿通过后，再交给专门的去 AI 味 Skill。
+
+## 语义内容生成（v0.3 新增）
+
+写作时根据 outline 的 `semantic_blocks` 生成真实结构化内容。加载 `references/semantic-components.md` 确认每个角色的必需字段。
+
+### 各角色内容要求
+
+- **comparison** 必须写出双方和统一维度，不得只有单方描述。
+- **steps / step_sequence** 必须写出有顺序的动作，不得只是并列要点。
+- **timeline** 必须写出时间或阶段，不得无序。
+- **facts / statistic** 必须附证据 ID，不得编造数据。
+- **decision** 必须写出背景、选项、权衡和结论，不得只有结论。
+- **faq** 必须是真实问题与答案，不得为了增加视觉变化编造问答。
+- **checklist** 必须是可执行检查项，不得只是观点列表。
+- **dialogue** 只能来自真实访谈或明确标注的模拟场景。
+- **quote** 必须保留原话和来源。
+- **resources / resource_list** 必须有名称、用途和链接。
+- **annotated_image / image_annotation** 必须有图片和真实标注点。
+- **code_comparison** 必须同时存在前后或 A/B 代码。
+- **cta / article_cta** 必须来自文章行动终点，不得自动添加营销口号。
+
+### 禁止事项
+
+禁止在 article.md 内直接写：
+
+- 组件 HTML
+- 主题色
+- CSS
+- "请使用某某红色卡片"之类视觉指令
+
+article.md 保持干净可读。语义信息放到独立的 `semantic-map.yaml`（模板见 `templates/semantic-map.yaml`）。
