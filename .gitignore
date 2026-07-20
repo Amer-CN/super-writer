@@ -23,7 +23,4 @@ Thumbs.db
 *.zip
 
 # Internal process files (not part of the Skill itself)
-phase4-evaluation-plan.md
-phase4-materials-structure.md
-package_zip.py
 prepackage_check.py
