@@ -75,6 +75,13 @@ next_action: "建议回到研究阶段寻找新角度，或放弃此选题"
 mode: full
 phase: 1
 article_type: null
+article_mode: null             # v0.3.1: short/medium/long/deep/daily_digest/weekly_roundup/material_synthesis
+length_mode: null              # v0.3.1: 与 article_mode 对应的篇幅预设
+target_visible_chars: null    # v0.3.1: 目标可见字符数
+acceptable_min: null          # v0.3.1: 最小可见字符数
+acceptable_max: null          # v0.3.1: 最大可见字符数
+material_ledger_path: null    # v0.3.1: 素材台账路径
+ingestion_report_path: null   # v0.3.1: 摄入报告路径
 reader: null
 core_status: pending
 material_readiness: null      # 素材充分性检查结果

@@ -4,7 +4,7 @@
 
 明确不负责：去 AI 味、美化排版、配图和发布。最终稿通过 `handoff` 交给下游 Skill。
 
-> **v0.3.0-rc1** — `ready_for_personal_use` | 117 tests passed | MIT License
+> **v0.3.1-rc1-hotfix5** — `release_candidate` | 230 tests passed | MIT License
 
 ## 目录结构
 
@@ -46,11 +46,16 @@ super-writer/
 │   ├── calibrate_scorer.py   #   评分器校准
 │   ├── learn_edits.py        #   编辑学习
 │   ├── validate_skill.py     #   结构验证
-│   └── validate_semantic_map.py  # 语义映射校验
-├── tests/                    # 测试套件（117 个）
+│   ├── validate_semantic_map.py  # 语义映射校验
+│   ├── validate_article_length.py  # 篇幅门禁校验（v0.3.1 新增）
+│   ├── check_manifest.py     #   文件完整性校验
+│   ├── package_zip.py        #   打包脚本
+│   └── gen_source_bundle.py  #   源码合并文档生成
+├── tests/                    # 测试套件（230 个）
 │   ├── test_structure.py
 │   ├── test_calibration.py
 │   ├── test_semantic_handoff.py
+│   ├── test_length_material.py  # 篇幅策略与素材路由测试（v0.3.1 新增）
 │   └── fixtures/             #   测试样本
 ├── capability-matrix.md      # 能力对比矩阵
 ├── design-decisions.md       # 设计决策记录
@@ -123,7 +128,7 @@ super-writer/
 
 **v0.3.0-rc1** — `ready_for_personal_use`
 
-- 117 个工程与行为测试：全部通过（含 28 项语义交接测试）
+- 230 个工程与行为测试：全部通过（含 50 项篇幅策略与素材路由测试）
 - 4 场景冒烟测试：全部通过
 - 3 篇语义 fixture 集成验收通过（简单观点文 / 结构化教程 / 深度分析）
 - 正式 Phase 4 评测：跳过（个人使用）
@@ -144,7 +149,7 @@ cd ~/.claude/skills/super-writer
 python -m pytest tests/ -v
 ```
 
-应看到 `117 passed`。
+应看到 `230 passed`。
 
 ## 使用方法
 
@@ -238,12 +243,13 @@ cd super-writer
 python -m pytest tests/ -v
 ```
 
-117 个测试分为四类：
+229 个测试分为四类：
 
 - **结构测试**（26 个）：检查文件中存在必要字段和配置
 - **脚本单元测试**（16 个）：测试 MAE、Spearman（含 ties）、分类准确率等指标计算
 - **行为测试**（47 个）：端到端 CLI 测试、真实 fixture 加载、编辑学习冲突流程、校准器机器分输入、严格 Schema 校验、输入防御检查等
-- **语义交接测试**（28 个）：覆盖 anchor 定位、角色校验、payload 必需字段、formatter 候选、降级路径、HTML/CSS 禁止、humanizer 失效链路、fixture 集成验收等
+- **语义交接测试**（91 个）：覆盖 anchor 定位、角色校验、payload 必需字段、formatter 候选、降级路径、HTML/CSS 禁止、humanizer 失效链路、内容来源校验、anchor 唯一性、URL 来源校验、fixture 集成验收等
+- **篇幅策略与素材路由测试**（49 个）：覆盖长度档位、文章模式、needs_mode_selection、事件级去重、章节预算、长度门禁、三层覆盖率、full 模式 11 产物深度校验、K3 177 条素材路由、material_ingestion CLI、code 字符统计、双向事件校验、重复状态强制、跨产物一致性校验等
 
 ## 设计文档
 
